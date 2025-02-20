@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <json_generator.h>
@@ -223,7 +224,26 @@ static int json_gen_set_int64(json_gen_str_t *jstr, int64_t val)
 {
 	jstr->comma_req = true;
 	char str[MAX_INT_IN_STR];
-	snprintf(str, MAX_INT_IN_STR, "%lld", val);
+	int pos = 0;
+	int64_t e9 = 1e9;
+	int64_t e18 = 1e18;
+	bool started = false;
+	int64_t absval = llabs(val);
+	int32_t valE18 = absval / e18;
+	int32_t valE9 = (absval - valE18 * e18) / e9;
+	int32_t valE0 = absval - valE18 * e18 - valE9 * e9;
+	if (absval != val) {
+	    pos += snprintf(str, MAX_INT_IN_STR, "-");
+	}
+	if (valE18 || started) {
+	    pos += snprintf(str + pos, MAX_INT_IN_STR - pos, started ? "%09ld" : "%ld", valE18);
+	    started = true;
+	}
+	if (valE9 || started) {
+	    pos += snprintf(str + pos, MAX_INT_IN_STR - pos, started ? "%09ld" : "%ld", valE9);
+	    started = true;
+	}
+	pos += snprintf(str + pos, MAX_INT_IN_STR - pos, started ? "%09ld" : "%ld", valE0);
 	return json_gen_add_to_str(jstr, str);
 }
 
